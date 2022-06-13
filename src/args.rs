@@ -61,7 +61,7 @@ pub fn cat_file(args: Vec<String>) -> Result<()> {
             Ok(())
         }
         second_arg => {
-            println!("{second_arg} not supported with cat-file");
+            println!("{} not supported with cat-file", second_arg);
             Ok(())
         }
     }
