@@ -56,7 +56,7 @@ pub fn cat_file(args: Vec<String>) -> Result<()> {
                 }
             }
 
-            let content = &s[counter..];
+            let content = &s[counter..].trim();
             println!("{}", content);
             Ok(())
         }
