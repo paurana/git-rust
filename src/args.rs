@@ -51,7 +51,7 @@ pub fn cat_file(args: Vec<String>) -> Result<()> {
                     if length == s[i..].len() {
                         let s = s.replace("\u{0000}", "");
                         let content = &s[i..];
-                        println!("{}", content);
+                        print!("{}", content);
                         return Ok(());
                     }
                 }
