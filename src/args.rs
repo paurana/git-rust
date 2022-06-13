@@ -46,19 +46,18 @@ pub fn cat_file(args: Vec<String>) -> Result<()> {
             //start_length = 5 to remove "blob "
             //s.len()-1 to remove the null byte at the end
 
-            let mut counter = 0; // to keep track of i
             for i in 0..s.len() {
                 if let Ok(length) = s[..i].parse::<usize>() {
                     if length == s[i..].len() {
-                        counter = i;
-                        break;
+                        let s = s.replace("\u{0000}", "");
+                        let content = &s[i..];
+                        println!("{}", content);
+                        return Ok(());
                     }
                 }
             }
 
-            let content = &s[counter..].trim();
-            println!("{}", content);
-            Ok(())
+            Err("Invalid Object".into())
         }
         second_arg => {
             println!("{} not supported with cat-file", second_arg);
