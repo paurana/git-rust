@@ -101,7 +101,6 @@ pub fn hash_object(args: Vec<String>) -> Result<()> {
             }
 
             let file_path = format!(".git/objects/{}/{}", &hex_sha1[..2], &hex_sha1[2..40]);
-            fs::remove_file(&file_path)?;
             let mut f = File::create(file_path)?;
             f.write(&buffer)?;
             
