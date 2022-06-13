@@ -42,13 +42,13 @@ pub fn cat_file(args: Vec<String>) -> Result<()> {
 
             // Git first constructs a header which starts by identifying the type of object --- in this case, a blob.
             // To that first part of the header, Git adds a space followed by the size in bytes of the content, and adding a final null byte:
-            let s = &s[5..s.len() - 1];
+            let s = &s[5..s.len()];
             //start_length = 5 to remove "blob "
             //s.len()-1 to remove the null byte at the end
 
             for i in 0..s.len() {
                 if let Ok(length) = s[..i].parse::<usize>() {
-                    if length == s[i..].len() {
+                    if length == s[i+1..].len() {
                         let s = s.replace("\u{0000}", "");
                         let content = &s[i..];
                         print!("{}", content);
