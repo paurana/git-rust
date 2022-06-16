@@ -1,19 +1,38 @@
+use crate::tree::Tree;
+use crate::utils::Utils;
 use flate2::read::ZlibDecoder;
+use flate2::write::ZlibEncoder as WriteEncoder;
+use flate2::Compression;
+use std::fmt::Display;
+use std::fs;
 use std::fs::File;
 use std::io::Read;
+use std::io::Write;
+use std::path::Path;
+use std::str;
 
 pub type Error = Box<dyn std::error::Error>;
 pub type Result<T> = std::result::Result<T, Error>;
 
 pub struct Object {
     pub object_type: ObjectType,
-    pub decoded_string: String,
+    pub content: Vec<u8>,
 }
 
 pub enum ObjectType {
     Blob,
     Tree,
     Commit,
+}
+
+impl Display for ObjectType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match *self {
+            ObjectType::Blob => write!(f, "blob"),
+            ObjectType::Tree => write!(f, "tree"),
+            ObjectType::Commit => write!(f, "commit"),
+        }
+    }
 }
 
 impl Object {
@@ -26,57 +45,75 @@ impl Object {
         let f = File::open(file_dir)?;
 
         let mut z = ZlibDecoder::new(f);
-        let mut s = String::new();
-        z.read_to_string(&mut s)?;
+        let mut buffer = Vec::new();
+        z.read_to_end(&mut buffer)?;
+        // println!("{:?}", buffer);
 
-        let git_object = s.split(' ').next().expect("Error identifying Object Type");
+        let index = buffer
+            .iter()
+            .position(|x| *x == ' ' as u8)
+            .expect("Error identifying Object Type");
+
+        let git_object = str::from_utf8(&buffer[..index])?;
+
         match git_object {
             "blob" => Ok(Object {
                 object_type: ObjectType::Blob,
-                decoded_string: s.to_string(),
+                content: buffer,
             }),
             "tree" => Ok(Object {
                 object_type: ObjectType::Tree,
-                decoded_string: s.to_string(),
+                content: buffer,
             }),
             "commit" => Ok(Object {
                 object_type: ObjectType::Commit,
-                decoded_string: s.to_string(),
+                content: buffer,
             }),
             _ => Err("Unidentified Git Object".into()),
         }
     }
 
-    pub fn open_tree(args: Vec<String>) -> Result<Object> {
-        let object_name = &args[3];
-        let dir_sha = &object_name[..2];
-        let file_name = &object_name[2..];
+    pub fn hash_object<T: AsRef<Path>>(object: ObjectType, filename: T) -> Result<String> {
+        let hex_sha1;
+        let content;
 
-        let file_dir = format!(".git/objects/{}/{}", dir_sha, file_name);
-        let f = File::open(file_dir)?;
+        match object {
+            ObjectType::Tree => {
+                let ref_entries = Tree::tree_content(filename)?;
+                let byte_vec = Tree::ref_entries_to_bytes(ref_entries)?;
 
-        let mut z = ZlibDecoder::new(f);
-        let mut buffer = vec![0; 32 * 1024];
-        z.read(&mut buffer)?;
-
-        let string = String::from_utf8_lossy(&buffer[..]);
-        let string = string.trim_matches(char::from(0)).to_string();
-
-        // Git first constructs a header which starts by identifying the type of object --- in this case, a tree.
-        // To that first part of the header, Git adds a space followed by the size in bytes of the content, and adding a final null byte:
-        let string = &string[5..string.len()];
-        //start_length = 5 to remove "tree "
-
-        let mut content = String::new();
-        if let Some(index) = string.find("\0") {
-            if let Ok(_length) = string[..index].parse::<usize>() {
-                content = string[index..].to_string();
+                let mut byte_content: Vec<u8> = Vec::new();
+                byte_content.extend("tree ".as_bytes());
+                byte_content.extend(byte_vec.len().to_string().as_bytes());
+                byte_content.push('\0' as u8);
+                byte_content.extend(byte_vec);
+                hex_sha1 = Utils::hex_sha1(&byte_content);
+                content = byte_content;
+            }
+            _ => {
+                let fs = fs::read_to_string(filename.as_ref())?;
+                content = format!("{} {}\u{0000}{}", object, fs.len(), fs)
+                    .as_bytes()
+                    .to_vec();
+                hex_sha1 = Utils::hex_sha1(&content);
             }
         }
 
-        Ok(Object {
-            object_type: ObjectType::Tree,
-            decoded_string: content,
-        })
+        let mut e = WriteEncoder::new(Vec::new(), Compression::default());
+        e.write_all(&content)?;
+        let buffer = e.finish()?;
+
+        let file_dir = format!(".git/objects/{}", &hex_sha1[..2]);
+        if !Path::new(&file_dir).exists() {
+            fs::create_dir(file_dir)?;
+        }
+
+        let file_path = format!(".git/objects/{}/{}", &hex_sha1[..2], &hex_sha1[2..40]);
+        if !Path::new(&file_path).exists() {
+            let mut f = File::create(file_path)?;
+            f.write(&buffer)?;
+        }
+
+        Ok(hex_sha1)
     }
 }

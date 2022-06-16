@@ -8,6 +8,8 @@ use std::fs;
 pub type Error = Box<dyn std::error::Error>;
 pub type Result<T> = std::result::Result<T, Error>;
 
+//todo: use clap for parsing cli args instead of matching &str
+
 pub fn parse(args: Vec<String>) -> Result<()> {
     assert!(args.len() > 1);
     let arg = &args[1][..];
@@ -16,6 +18,7 @@ pub fn parse(args: Vec<String>) -> Result<()> {
         "cat-file" => cat_file(args),
         "hash-object" => hash_object(args),
         "ls-tree" => ls_tree(args),
+        "write-tree" => Tree::write_tree(),
         _ => {
             println!("unknown command: {}", args[1]);
             Ok(())
@@ -39,7 +42,7 @@ pub fn cat_file(args: Vec<String>) -> Result<()> {
             let object = Object::open(args)?;
 
             match object.object_type {
-                ObjectType::Blob => Blob::cat_file(object.decoded_string),
+                ObjectType::Blob => Blob::cat_file(object.content),
                 _ => todo!(),
             }
         }
@@ -53,7 +56,11 @@ pub fn cat_file(args: Vec<String>) -> Result<()> {
 pub fn hash_object(args: Vec<String>) -> Result<()> {
     let option = &args[2][..];
     match option {
-        "-w" => Blob::hash_object(args),
+        "-w" => {
+            let hex_sha1 = Object::hash_object(ObjectType::Blob, &args[3])?;
+            println!("{}", hex_sha1);
+            Ok(())
+        }
         second_arg => {
             println!("{} not supported with hash-object", second_arg);
             Ok(())
@@ -65,9 +72,9 @@ pub fn ls_tree(args: Vec<String>) -> Result<()> {
     let option = &args[2][..];
     match option {
         "--name-only" => {
-            let object = Object::open_tree(args)?;
+            let object = Object::open(args)?;
             match object.object_type {
-                ObjectType::Tree => Tree::ls_tree(object.decoded_string),
+                ObjectType::Tree => Tree::ls_tree(object.content),
                 _ => Err("Only for Tree Objects".into()),
             }
         }

@@ -4,6 +4,7 @@ mod args;
 mod blob;
 mod object;
 mod tree;
+mod utils;
 
 pub type Error = Box<dyn std::error::Error>;
 pub type Result<T> = std::result::Result<T, Error>;
