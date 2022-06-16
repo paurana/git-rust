@@ -35,8 +35,6 @@ impl Tree {
     const POSSIBLE_MODES: [u32; 7] = [100664, 100775, 100644, 100755, 120000, 40000, 160000];
 
     pub fn ls_tree(data: Vec<u8>) -> Result<()> {
-        println!("{:?}", data);
-
         let header = std::str::from_utf8(&data[..5])?;
         if header != "tree " {
             return Err("Invalid Header, Not a Tree Object".into());
