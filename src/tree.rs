@@ -54,8 +54,6 @@ impl Tree {
             let mode: u32 = std::str::from_utf8(&data[counter..counter + index])?
                 .parse()
                 .unwrap();
-            println!("{counter} {}", data.len());
-            println!("{mode}");
             counter += index + 1;
             index = data[counter..]
                 .iter()
