@@ -75,7 +75,7 @@ impl Commit {
         byte_content.extend(commit_entry_in_bytes);
         let hex_sha1 = Utils::hex_sha1(&byte_content);
 
-        println!("{hex_sha1}");
+        println!("{}", hex_sha1);
 
         Ok(())
 
