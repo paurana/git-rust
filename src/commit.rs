@@ -137,6 +137,7 @@ impl Commit {
         vec.push('\n' as u8);
 
         vec.extend(entry.message.as_bytes());
+        vec.push('\n' as u8);
         
         vec
     }
