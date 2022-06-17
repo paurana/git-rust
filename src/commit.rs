@@ -1,4 +1,10 @@
 use crate::utils::Utils;
+use flate2::write::ZlibEncoder as WriteEncoder;
+use flate2::Compression;
+use std::path::Path;
+use std::fs;
+use std::fs::File;
+use std::io::Write;
 
 use std::{
     convert::TryInto,
@@ -76,6 +82,24 @@ impl Commit {
         let hex_sha1 = Utils::hex_sha1(&byte_content);
 
         println!("{}", hex_sha1);
+
+        let content = byte_content;
+
+        let mut e = WriteEncoder::new(Vec::new(), Compression::default());
+        e.write_all(&content)?;
+        let buffer = e.finish()?;
+
+        let file_dir = format!(".git/objects/{}", &hex_sha1[..2]);
+        if !Path::new(&file_dir).exists() {
+            fs::create_dir(file_dir)?;
+        }
+
+        let file_path = format!(".git/objects/{}/{}", &hex_sha1[..2], &hex_sha1[2..40]);
+        if !Path::new(&file_path).exists() {
+            let mut f = File::create(file_path)?;
+            f.write(&buffer)?;
+        }
+
 
         Ok(())
 
