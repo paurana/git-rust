@@ -1,9 +1,8 @@
 use crate::blob::Blob;
+use crate::commit::Commit;
 use crate::object::{Object, ObjectType};
 use crate::tree::Tree;
 use std::fs;
-#[allow(unused_imports)]
-#[allow(dead_code)]
 
 pub type Error = Box<dyn std::error::Error>;
 pub type Result<T> = std::result::Result<T, Error>;
@@ -19,6 +18,7 @@ pub fn parse(args: Vec<String>) -> Result<()> {
         "hash-object" => hash_object(args),
         "ls-tree" => ls_tree(args),
         "write-tree" => Tree::write_tree(),
+        "commit-tree" => commit_tree(args),
         _ => {
             println!("unknown command: {}", args[1]);
             Ok(())
@@ -83,4 +83,8 @@ pub fn ls_tree(args: Vec<String>) -> Result<()> {
             Ok(())
         }
     }
+}
+
+pub fn commit_tree(args: Vec<String>) -> Result<()> {
+   Commit::commit_tree(args)
 }

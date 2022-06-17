@@ -90,7 +90,10 @@ impl Object {
                 hex_sha1 = Utils::hex_sha1(&byte_content);
                 content = byte_content;
             }
-            _ => {
+            ObjectType::Commit => {
+                return Err("Function not implemented for Commit Objects".into());
+            }
+            ObjectType::Blob => {
                 let fs = fs::read_to_string(filename.as_ref())?;
                 content = format!("{} {}\u{0000}{}", object, fs.len(), fs)
                     .as_bytes()

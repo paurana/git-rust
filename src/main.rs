@@ -2,6 +2,7 @@ use std::env;
 
 mod args;
 mod blob;
+mod commit;
 mod object;
 mod tree;
 mod utils;
