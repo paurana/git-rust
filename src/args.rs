@@ -1,4 +1,5 @@
 use crate::blob::Blob;
+use crate::clone::Clone;
 use crate::commit::Commit;
 use crate::object::{Object, ObjectType};
 use crate::tree::Tree;
@@ -9,7 +10,7 @@ pub type Result<T> = std::result::Result<T, Error>;
 
 //todo: use clap for parsing cli args instead of matching &str
 
-pub fn parse(args: Vec<String>) -> Result<()> {
+pub async fn parse(args: Vec<String>) -> Result<()> {
     assert!(args.len() > 1);
     let arg = &args[1][..];
     match arg {
@@ -19,6 +20,7 @@ pub fn parse(args: Vec<String>) -> Result<()> {
         "ls-tree" => ls_tree(args),
         "write-tree" => Tree::write_tree(),
         "commit-tree" => commit_tree(args),
+        "clone" => clone(args).await,
         _ => {
             println!("unknown command: {}", args[1]);
             Ok(())
@@ -86,5 +88,11 @@ pub fn ls_tree(args: Vec<String>) -> Result<()> {
 }
 
 pub fn commit_tree(args: Vec<String>) -> Result<()> {
-   Commit::commit_tree(args)
+    Commit::commit_tree(args)
+}
+
+pub async fn clone(args: Vec<String>) -> Result<()> {
+    let clone = Clone::new(args[2].clone());
+    clone.clone().await?;
+    Ok(())
 }

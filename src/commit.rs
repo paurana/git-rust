@@ -1,10 +1,10 @@
 use crate::utils::Utils;
 use flate2::write::ZlibEncoder as WriteEncoder;
 use flate2::Compression;
-use std::path::Path;
 use std::fs;
 use std::fs::File;
 use std::io::Write;
+use std::path::Path;
 
 use std::{
     convert::TryInto,
@@ -71,8 +71,8 @@ impl Commit {
             committer,
             message,
         };
-        
-        let commit_entry_in_bytes  = Commit::commit_entry_to_bytes(commit_entry);
+
+        let commit_entry_in_bytes = Commit::commit_entry_to_bytes(commit_entry);
 
         let mut byte_content: Vec<u8> = Vec::new();
         byte_content.extend("commit ".as_bytes());
@@ -100,9 +100,7 @@ impl Commit {
             f.write(&buffer)?;
         }
 
-
         Ok(())
-
     }
 
     pub fn commit_entry_to_bytes(entry: CommitEntry) -> Vec<u8> {
@@ -138,7 +136,7 @@ impl Commit {
 
         vec.extend(entry.message.as_bytes());
         vec.push('\n' as u8);
-        
+
         vec
     }
 }
