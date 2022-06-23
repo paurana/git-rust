@@ -1,11 +1,12 @@
 use std::convert::TryInto;
 use std::fmt::Debug;
+use std::fs;
 use std::fs::File;
 use std::os::unix::fs::PermissionsExt;
 use std::{path::Path, path::PathBuf};
 
 use crate::object::{Object, ObjectType};
-use crate::utils::Utils;
+use crate::utils;
 
 pub type Error = Box<dyn std::error::Error>;
 pub type Result<T> = std::result::Result<T, Error>;
@@ -82,72 +83,10 @@ impl Tree {
         }
 
         Ok(())
-
-        // let data = String::from_utf8_lossy(&data[..]);
-
-        // let mut data = &data[5..data.len()];
-        //start_length = 5 to remove "tree "
-
-        //this is absolutely not required because the code below works with or without the tree
-        //header + length + \0, will probably remove the following block in a later commit
-        ////keeping it atm for debugging purposes
-        //if let Some(index) = data.find("\0") {
-        //    if let Ok(_length) = data[..index].parse::<usize>() {
-        //        // println!("{}", _length);
-        //        // println!("{}", data[index+1..].len());
-        //        data = &data[index + 1..];
-        //    }
-        // }
-
-        //let mut files = Vec::new();
-
-        //let mut vec_indices = Vec::new();
-        //for chars in data.char_indices() {
-        //    vec_indices.push(chars.0);
-        //}
-
-        ////fuck i should probably document this
-        ////todo: come up with a better implementation, current implementation is dog shit
-        ////okay, I have a better way already, thanks to the RefEntry Struct. todo: implement it
-        //let mut i = 0;
-        //while i + 6 < vec_indices.len() {
-        //    if let Ok(mode) = data[vec_indices[i]..vec_indices[i + 6]].parse::<u32>() {
-        //        if Tree::POSSIBLE_MODES.contains(&mode) {
-        //            let index = i + 7;
-        //            if let Some(index_null) = &data[vec_indices[index]..].find('\0') {
-        //                let filename = &data[vec_indices[index]..vec_indices[index + index_null]];
-        //                files.push(filename);
-        //            }
-        //            i += 7;
-        //        } else {
-        //            i += 1;
-        //        }
-        //    } else if let Ok(mode) = data[vec_indices[i]..vec_indices[i + 5]].parse::<u32>() {
-        //        let index = i + 6;
-        //        if Tree::POSSIBLE_MODES.contains(&mode) {
-        //            if let Some(index_null) = &data[vec_indices[index]..].find('\0') {
-        //                let filename = &data[vec_indices[index]..vec_indices[index + index_null]];
-        //                files.push(filename);
-        //            }
-        //            i += 6;
-        //        } else {
-        //            i += 1;
-        //        }
-        //    } else {
-        //        i += 1;
-        //    }
-        //}
-
-        //files.sort();
-        //for file in files {
-        //    println!("{}", file);
-        //}
-
-        // Ok(())
     }
 
     pub fn tree_content<T: AsRef<Path>>(path: T) -> Result<Vec<RefEntry>> {
-        let absolute_entries: Vec<PathBuf> = Utils::gitignored_sorted_current_dir(path.as_ref())?;
+        let absolute_entries: Vec<PathBuf> = utils::gitignored_sorted_current_dir(path.as_ref())?;
 
         let mut tree: Vec<RefEntry> = Vec::new();
 
@@ -164,7 +103,9 @@ impl Tree {
                     } else if git_mode == 100775 {
                         git_mode = 100755;
                     }
-                    let hex_sha1 = Object::hash_object(ObjectType::Blob, &i)?;
+
+                    let byte_vec = fs::read(&i)?;
+                    let hex_sha1 = Object::hash_object(ObjectType::Blob, byte_vec)?;
 
                     let entry = RefEntry {
                         mode: git_mode,
@@ -179,7 +120,10 @@ impl Tree {
                 }
             } else if metadata.is_dir() {
                 git_mode = 40000;
-                let sha1 = Object::hash_object(ObjectType::Tree, &i)?;
+
+                let ref_entries = Tree::tree_content(&i)?;
+                let byte_vec = Tree::ref_entries_to_bytes(ref_entries)?;
+                let sha1 = Object::hash_object(ObjectType::Tree, byte_vec)?;
 
                 let entry = RefEntry {
                     mode: git_mode,
@@ -246,7 +190,9 @@ impl Tree {
     }
 
     pub fn write_tree() -> Result<()> {
-        let sha1 = Object::hash_object(ObjectType::Tree, ".")?;
+        let ref_entries = Tree::tree_content(".")?;
+        let byte_vec = Tree::ref_entries_to_bytes(ref_entries)?;
+        let sha1 = Object::hash_object(ObjectType::Tree, byte_vec)?;
 
         println!("{}", sha1);
 

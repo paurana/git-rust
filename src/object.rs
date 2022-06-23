@@ -1,14 +1,8 @@
-use crate::tree::Tree;
-use crate::utils::Utils;
+use crate::utils;
 use flate2::read::ZlibDecoder;
-use flate2::write::ZlibEncoder as WriteEncoder;
-use flate2::Compression;
 use std::fmt::Display;
-use std::fs;
 use std::fs::File;
 use std::io::Read;
-use std::io::Write;
-use std::path::Path;
 use std::str;
 
 pub type Error = Box<dyn std::error::Error>;
@@ -37,7 +31,6 @@ impl Display for ObjectType {
 
 impl Object {
     pub fn open(object_sha: String) -> Result<Object> {
-        // let object_name = &args[3];
         let dir_sha = &object_sha[..2];
         let file_name = &object_sha[2..];
 
@@ -73,49 +66,44 @@ impl Object {
         }
     }
 
-    pub fn hash_object<T: AsRef<Path>>(object: ObjectType, filename: T) -> Result<String> {
+    pub fn hash_object<T: AsRef<[u8]>>(object_type: ObjectType, byte_vec: T) -> Result<String> {
         let hex_sha1;
         let content;
 
-        match object {
+        match object_type {
             ObjectType::Tree => {
-                let ref_entries = Tree::tree_content(filename)?;
-                let byte_vec = Tree::ref_entries_to_bytes(ref_entries)?;
-
                 let mut byte_content: Vec<u8> = Vec::new();
                 byte_content.extend("tree ".as_bytes());
-                byte_content.extend(byte_vec.len().to_string().as_bytes());
+                byte_content.extend(byte_vec.as_ref().len().to_string().as_bytes());
                 byte_content.push('\0' as u8);
-                byte_content.extend(byte_vec);
-                hex_sha1 = Utils::hex_sha1(&byte_content);
+                byte_content.extend(byte_vec.as_ref());
+                hex_sha1 = utils::hex_sha1(&byte_content);
                 content = byte_content;
             }
             ObjectType::Commit => {
-                return Err("Function not implemented for Commit Objects".into());
+                let mut byte_content: Vec<u8> = Vec::new();
+                byte_content.extend("commit ".as_bytes());
+                byte_content.extend(byte_vec.as_ref().len().to_string().as_bytes());
+                byte_content.push('\0' as u8);
+                byte_content.extend(byte_vec.as_ref());
+                hex_sha1 = utils::hex_sha1(&byte_content);
+                content = byte_content;
             }
             ObjectType::Blob => {
-                let fs = fs::read_to_string(filename.as_ref())?;
-                content = format!("{} {}\u{0000}{}", object, fs.len(), fs)
-                    .as_bytes()
-                    .to_vec();
-                hex_sha1 = Utils::hex_sha1(&content);
+                let fs = byte_vec.as_ref();
+                content = format!(
+                    "{} {}\u{0000}{}",
+                    object_type,
+                    fs.len(),
+                    str::from_utf8(fs)?
+                )
+                .as_bytes()
+                .to_vec();
+                hex_sha1 = utils::hex_sha1(&content);
             }
         }
 
-        let mut e = WriteEncoder::new(Vec::new(), Compression::default());
-        e.write_all(&content)?;
-        let buffer = e.finish()?;
-
-        let file_dir = format!(".git/objects/{}", &hex_sha1[..2]);
-        if !Path::new(&file_dir).exists() {
-            fs::create_dir(file_dir)?;
-        }
-
-        let file_path = format!(".git/objects/{}/{}", &hex_sha1[..2], &hex_sha1[2..40]);
-        if !Path::new(&file_path).exists() {
-            let mut f = File::create(file_path)?;
-            f.write(&buffer)?;
-        }
+        utils::save_object(hex_sha1.to_string(), content)?;
 
         Ok(hex_sha1)
     }

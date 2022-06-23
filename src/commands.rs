@@ -41,7 +41,8 @@ pub fn cat_file(args: &catFile) -> Result<()> {
 }
 
 pub fn hash_object(args: &HashObject) -> Result<()> {
-    let hex_sha1 = Object::hash_object(ObjectType::Blob, &args.path)?;
+    let byte_vec = fs::read(&args.path)?;
+    let hex_sha1 = Object::hash_object(ObjectType::Blob, byte_vec)?;
     println!("{}", hex_sha1);
     Ok(())
 }
