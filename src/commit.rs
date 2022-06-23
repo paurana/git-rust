@@ -48,17 +48,17 @@ impl Commit {
                 .duration_since(UNIX_EPOCH)
                 .unwrap()
                 .as_secs(),
-            offset: String::from("+530"),
+            offset: String::from("+0530"),
         };
 
         let committer = Committer {
-            name: String::from("Aayush author"),
-            email: String::from("aayushauthor@gmail.com"),
+            name: String::from("Aayush committer"),
+            email: String::from("aayushcommitter@gmail.com"),
             time: SystemTime::now()
                 .duration_since(UNIX_EPOCH)
                 .unwrap()
                 .as_secs(),
-            offset: String::from("+530"),
+            offset: String::from("+0530"),
         };
 
         let tree: [u8; 40] = args.tree_sha.as_bytes().try_into()?;
@@ -117,8 +117,9 @@ impl Commit {
 
         vec.extend("author ".as_bytes());
         vec.extend(entry.author.name.as_bytes());
-        vec.push(' ' as u8);
+        vec.extend(" <".as_bytes());
         vec.extend(entry.author.email.as_bytes());
+        vec.extend("> ".as_bytes());
         vec.extend(entry.author.time.to_string().as_bytes());
         vec.push(' ' as u8);
         vec.extend(entry.author.offset.as_bytes());
@@ -126,8 +127,9 @@ impl Commit {
 
         vec.extend("committer ".as_bytes());
         vec.extend(entry.committer.name.as_bytes());
-        vec.push(' ' as u8);
+        vec.extend(" <".as_bytes());
         vec.extend(entry.committer.email.as_bytes());
+        vec.extend("> ".as_bytes());
         vec.extend(entry.committer.time.to_string().as_bytes());
         vec.push(' ' as u8);
         vec.extend(entry.committer.offset.as_bytes());
