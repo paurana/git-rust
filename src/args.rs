@@ -1,90 +1,49 @@
-use crate::blob::Blob;
-use crate::commit::Commit;
-use crate::object::{Object, ObjectType};
-use crate::tree::Tree;
-use std::fs;
+#![allow(non_camel_case_types)]
 
-pub type Error = Box<dyn std::error::Error>;
-pub type Result<T> = std::result::Result<T, Error>;
+use std::path::PathBuf;
 
-//todo: use clap for parsing cli args instead of matching &str
+use clap::{Parser, Subcommand};
 
-pub fn parse(args: Vec<String>) -> Result<()> {
-    assert!(args.len() > 1);
-    let arg = &args[1][..];
-    match arg {
-        "init" => init(),
-        "cat-file" => cat_file(args),
-        "hash-object" => hash_object(args),
-        "ls-tree" => ls_tree(args),
-        "write-tree" => Tree::write_tree(),
-        "commit-tree" => commit_tree(args),
-        _ => {
-            println!("unknown command: {}", args[1]);
-            Ok(())
-        }
-    }
+#[derive(Parser)]
+pub struct Args {
+    #[clap(subcommand)]
+    pub command: Commands,
 }
 
-pub fn init() -> Result<()> {
-    fs::create_dir(".git")?;
-    fs::create_dir(".git/objects")?;
-    fs::create_dir(".git/refs")?;
-    fs::write(".git/HEAD", "ref: refs/heads/master\n")?;
-    println!("Initialized git directory");
-    Ok(())
+#[derive(Subcommand)]
+pub enum Commands {
+    Init,
+    // #[clap(long = "cat-file")]
+    catFile(catFile),
+    HashObject(HashObject),
+    lsTree(lsTree),
+    WriteTree,
+    CommitTree(CommitTree),
 }
 
-pub fn cat_file(args: Vec<String>) -> Result<()> {
-    let option = &args[2][..];
-    match option {
-        "-p" => {
-            let object = Object::open(args)?;
-
-            match object.object_type {
-                ObjectType::Blob => Blob::cat_file(object.content),
-                _ => todo!(),
-            }
-        }
-        second_arg => {
-            println!("{} not supported with cat-file", second_arg);
-            Ok(())
-        }
-    }
+#[derive(clap::Args)]
+pub struct catFile {
+    #[clap(short = 'p')]
+    pub sha1: String,
 }
 
-pub fn hash_object(args: Vec<String>) -> Result<()> {
-    let option = &args[2][..];
-    match option {
-        "-w" => {
-            let hex_sha1 = Object::hash_object(ObjectType::Blob, &args[3])?;
-            println!("{}", hex_sha1);
-            Ok(())
-        }
-        second_arg => {
-            println!("{} not supported with hash-object", second_arg);
-            Ok(())
-        }
-    }
+#[derive(clap::Args)]
+pub struct HashObject {
+    #[clap(short = 'w')]
+    pub path: PathBuf,
 }
 
-pub fn ls_tree(args: Vec<String>) -> Result<()> {
-    let option = &args[2][..];
-    match option {
-        "--name-only" => {
-            let object = Object::open(args)?;
-            match object.object_type {
-                ObjectType::Tree => Tree::ls_tree(object.content),
-                _ => Err("Only for Tree Objects".into()),
-            }
-        }
-        second_arg => {
-            println!("{} not supported with hash-object", second_arg);
-            Ok(())
-        }
-    }
+#[derive(clap::Args)]
+pub struct lsTree {
+    #[clap(long = "name-only")]
+    pub sha1: String,
 }
 
-pub fn commit_tree(args: Vec<String>) -> Result<()> {
-   Commit::commit_tree(args)
+#[derive(clap::Args)]
+pub struct CommitTree {
+    pub tree_sha: String,
+    #[clap(short = 'p')]
+    pub commit_sha: String,
+    #[clap(short = 'm')]
+    pub message: String,
 }

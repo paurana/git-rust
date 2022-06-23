@@ -36,10 +36,10 @@ impl Display for ObjectType {
 }
 
 impl Object {
-    pub fn open(args: Vec<String>) -> Result<Object> {
-        let object_name = &args[3];
-        let dir_sha = &object_name[..2];
-        let file_name = &object_name[2..];
+    pub fn open(object_sha: String) -> Result<Object> {
+        // let object_name = &args[3];
+        let dir_sha = &object_sha[..2];
+        let file_name = &object_sha[2..];
 
         let file_dir = format!(".git/objects/{}/{}", dir_sha, file_name);
         let f = File::open(file_dir)?;

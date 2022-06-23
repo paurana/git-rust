@@ -1,10 +1,11 @@
+use crate::args::CommitTree;
 use crate::utils::Utils;
 use flate2::write::ZlibEncoder as WriteEncoder;
 use flate2::Compression;
-use std::path::Path;
 use std::fs;
 use std::fs::File;
 use std::io::Write;
+use std::path::Path;
 
 use std::{
     convert::TryInto,
@@ -39,7 +40,7 @@ struct Committer {
 }
 
 impl Commit {
-    pub fn commit_tree(args: Vec<String>) -> Result<()> {
+    pub fn commit_tree(args: &CommitTree) -> Result<()> {
         let author = Author {
             name: String::from("Aayush author"),
             email: String::from("aayushauthor@gmail.com"),
@@ -60,9 +61,9 @@ impl Commit {
             offset: String::from("+530"),
         };
 
-        let tree: [u8; 40] = args[2].as_bytes().try_into()?;
-        let parent: [u8; 40] = args[4].as_bytes().try_into()?;
-        let message: String = args[6].to_string();
+        let tree: [u8; 40] = args.tree_sha.as_bytes().try_into()?;
+        let parent: [u8; 40] = args.commit_sha.as_bytes().try_into()?;
+        let message: String = args.message.to_string();
 
         let commit_entry = CommitEntry {
             tree,
@@ -71,8 +72,8 @@ impl Commit {
             committer,
             message,
         };
-        
-        let commit_entry_in_bytes  = Commit::commit_entry_to_bytes(commit_entry);
+
+        let commit_entry_in_bytes = Commit::commit_entry_to_bytes(commit_entry);
 
         let mut byte_content: Vec<u8> = Vec::new();
         byte_content.extend("commit ".as_bytes());
@@ -100,9 +101,7 @@ impl Commit {
             f.write(&buffer)?;
         }
 
-
         Ok(())
-
     }
 
     pub fn commit_entry_to_bytes(entry: CommitEntry) -> Vec<u8> {
@@ -138,7 +137,7 @@ impl Commit {
 
         vec.extend(entry.message.as_bytes());
         vec.push('\n' as u8);
-        
+
         vec
     }
 }
