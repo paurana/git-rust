@@ -32,7 +32,7 @@ pub fn init() -> Result<()> {
 }
 
 pub fn cat_file(args: &catFile) -> Result<()> {
-    let object = Object::open(args.sha1.to_string())?;
+    let object = Object::open(&args.sha1)?;
 
     match object.object_type {
         ObjectType::Blob => Blob::cat_file(object.content),
@@ -48,7 +48,7 @@ pub fn hash_object(args: &HashObject) -> Result<()> {
 }
 
 pub fn ls_tree(args: &lsTree) -> Result<()> {
-    let object = Object::open(args.sha1.to_string())?;
+    let object = Object::open(&args.sha1)?;
     match object.object_type {
         ObjectType::Tree => Tree::ls_tree(object.content),
         _ => Err("Only for Tree Objects".into()),

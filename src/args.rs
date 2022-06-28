@@ -13,7 +13,6 @@ pub struct Args {
 #[derive(Subcommand)]
 pub enum Commands {
     Init,
-    // #[clap(long = "cat-file")]
     catFile(catFile),
     HashObject(HashObject),
     lsTree(lsTree),

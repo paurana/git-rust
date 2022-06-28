@@ -30,7 +30,7 @@ impl Display for ObjectType {
 }
 
 impl Object {
-    pub fn open(object_sha: String) -> Result<Object> {
+    pub fn open(object_sha: &str) -> Result<Object> {
         let dir_sha = &object_sha[..2];
         let file_name = &object_sha[2..];
 
@@ -103,7 +103,7 @@ impl Object {
             }
         }
 
-        utils::save_object(hex_sha1.to_string(), content)?;
+        utils::save_object(&hex_sha1, content)?;
 
         Ok(hex_sha1)
     }

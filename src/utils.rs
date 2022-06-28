@@ -18,7 +18,7 @@ pub fn hex_sha1<T: AsRef<[u8]>>(data: T) -> String {
     hex_sha1
 }
 
-pub fn save_object<T: AsRef<[u8]>>(hex_sha1: String, data: T) -> Result<()> {
+pub fn save_object<T: AsRef<[u8]>>(hex_sha1: &str, data: T) -> Result<()> {
     let mut e = WriteEncoder::new(Vec::new(), Compression::default());
     e.write_all(data.as_ref())?;
     let buffer = e.finish()?;
@@ -63,7 +63,7 @@ pub fn gitignored_sorted_current_dir<T: AsRef<Path>>(dir_path: T) -> Result<Vec<
         Some(dir) => {
             path.push(dir);
             let gitpath = format!("{}/.git", dir);
-            gitignore_content.push(String::from(gitpath));
+            gitignore_content.push(gitpath);
             if path.ends_with("/") {
                 path.push(".gitignore");
             } else {

@@ -11,12 +11,12 @@ pub type Result<T> = std::result::Result<T, Error>;
 
 pub struct Commit {}
 
-pub struct CommitEntry {
+pub struct CommitEntry<'a> {
     tree: [u8; 40],
     parent: [u8; 40], //only one parent will be provided
     author: Author,
     committer: Committer,
-    message: String, //only one message will be provided
+    message: &'a str, //only one message will be provided
 }
 
 struct Author {
@@ -31,6 +31,42 @@ struct Committer {
     email: String,
     time: u64,
     offset: String,
+}
+
+trait StructToBytes {
+    fn as_bytes(&self) -> Vec<u8>;
+}
+
+impl StructToBytes for Author {
+    fn as_bytes(&self) -> Vec<u8> {
+        let mut vec: Vec<u8> = Vec::new();
+        vec.extend("author ".as_bytes());
+        vec.extend(self.name.as_bytes());
+        vec.extend(" <".as_bytes());
+        vec.extend(self.email.as_bytes());
+        vec.extend("> ".as_bytes());
+        vec.extend(self.time.to_string().as_bytes());
+        vec.push(' ' as u8);
+        vec.extend(self.offset.as_bytes());
+        vec.push('\n' as u8);
+        vec
+    }
+}
+
+impl StructToBytes for Committer{
+       fn as_bytes(&self) -> Vec<u8> {
+        let mut vec: Vec<u8> = Vec::new();
+        vec.extend("committer ".as_bytes());
+        vec.extend(self.name.as_bytes());
+        vec.extend(" <".as_bytes());
+        vec.extend(self.email.as_bytes());
+        vec.extend("> ".as_bytes());
+        vec.extend(self.time.to_string().as_bytes());
+        vec.push(' ' as u8);
+        vec.extend(self.offset.as_bytes());
+        vec.push('\n' as u8);
+        vec
+       } 
 }
 
 impl Commit {
@@ -57,7 +93,7 @@ impl Commit {
 
         let tree: [u8; 40] = args.tree_sha.as_bytes().try_into()?;
         let parent: [u8; 40] = args.commit_sha.as_bytes().try_into()?;
-        let message: String = args.message.to_string();
+        let message = &args.message;
 
         let commit_entry = CommitEntry {
             tree,
@@ -87,25 +123,9 @@ impl Commit {
         vec.extend(entry.parent);
         vec.push('\n' as u8);
 
-        vec.extend("author ".as_bytes());
-        vec.extend(entry.author.name.as_bytes());
-        vec.extend(" <".as_bytes());
-        vec.extend(entry.author.email.as_bytes());
-        vec.extend("> ".as_bytes());
-        vec.extend(entry.author.time.to_string().as_bytes());
-        vec.push(' ' as u8);
-        vec.extend(entry.author.offset.as_bytes());
-        vec.push('\n' as u8);
+        vec.extend(entry.author.as_bytes());
 
-        vec.extend("committer ".as_bytes());
-        vec.extend(entry.committer.name.as_bytes());
-        vec.extend(" <".as_bytes());
-        vec.extend(entry.committer.email.as_bytes());
-        vec.extend("> ".as_bytes());
-        vec.extend(entry.committer.time.to_string().as_bytes());
-        vec.push(' ' as u8);
-        vec.extend(entry.committer.offset.as_bytes());
-        vec.push('\n' as u8);
+        vec.extend(entry.committer.as_bytes());
 
         vec.push('\n' as u8);
 
