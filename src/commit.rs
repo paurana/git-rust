@@ -53,8 +53,8 @@ impl StructToBytes for Author {
     }
 }
 
-impl StructToBytes for Committer{
-       fn as_bytes(&self) -> Vec<u8> {
+impl StructToBytes for Committer {
+    fn as_bytes(&self) -> Vec<u8> {
         let mut vec: Vec<u8> = Vec::new();
         vec.extend("committer ".as_bytes());
         vec.extend(self.name.as_bytes());
@@ -66,7 +66,7 @@ impl StructToBytes for Committer{
         vec.extend(self.offset.as_bytes());
         vec.push('\n' as u8);
         vec
-       } 
+    }
 }
 
 impl Commit {

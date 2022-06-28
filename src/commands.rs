@@ -9,7 +9,7 @@ use std::fs;
 pub type Error = Box<dyn std::error::Error>;
 pub type Result<T> = std::result::Result<T, Error>;
 
-pub fn run() -> Result<()> {
+pub async fn run() -> Result<()> {
     let cli = Args::parse();
 
     match &cli.command {
@@ -19,6 +19,7 @@ pub fn run() -> Result<()> {
         Commands::lsTree(args) => ls_tree(args),
         Commands::WriteTree => Tree::write_tree(),
         Commands::CommitTree(args) => commit_tree(args),
+        Commands::Clone(args) => clone(args).await,
     }
 }
 
@@ -57,4 +58,10 @@ pub fn ls_tree(args: &lsTree) -> Result<()> {
 
 pub fn commit_tree(args: &CommitTree) -> Result<()> {
     Commit::commit_tree(args)
+}
+
+pub async fn clone(args: &Clone) -> Result<()> {
+    let clone = crate::clone::Clone::new(args);
+    clone.clone().await?;
+    Ok(())
 }

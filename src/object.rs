@@ -30,7 +30,7 @@ impl Display for ObjectType {
 }
 
 impl Object {
-    pub fn open(object_sha: &str) -> Result<Object> {
+    pub fn open(object_sha: &str) -> Result<Self> {
         let dir_sha = &object_sha[..2];
         let file_name = &object_sha[2..];
 

@@ -18,6 +18,7 @@ pub enum Commands {
     lsTree(lsTree),
     WriteTree,
     CommitTree(CommitTree),
+    Clone(Clone),
 }
 
 #[derive(clap::Args)]
@@ -45,4 +46,10 @@ pub struct CommitTree {
     pub commit_sha: String,
     #[clap(short = 'm')]
     pub message: String,
+}
+
+#[derive(clap::Args)]
+pub struct Clone {
+    pub url: String,
+    pub dir: String,
 }
