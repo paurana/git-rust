@@ -13,7 +13,7 @@ pub type Result<T> = std::result::Result<T, Error>;
 
 pub struct RefEntry {
     pub mode: u32,
-    pub outer_tree: PathBuf,
+    pub filename: PathBuf, //probably should have used String here, would have made things much simpler :/
     pub sha1: [u8; 40],
 }
 
@@ -24,7 +24,7 @@ impl Debug for RefEntry {
             f,
             "{} {} {}",
             self.mode,
-            self.outer_tree.display(),
+            self.filename.display(),
             string_sha1,
         )
     }
@@ -46,10 +46,13 @@ impl Tree {
 
         let mut counter = index + 1;
         while counter <= data.len() {
-            index = data[counter..]
-                .iter()
-                .position(|x| *x == ' ' as u8)
-                .unwrap();
+            let break_var = data[counter..].iter().position(|x| *x == ' ' as u8);
+            if break_var.is_none() {
+                break;
+            } else {
+                index = break_var.unwrap();
+            }
+
             let mode: u32 = std::str::from_utf8(&data[counter..counter + index])?
                 .parse()
                 .unwrap();
@@ -58,7 +61,7 @@ impl Tree {
                 .iter()
                 .position(|x| *x == '\0' as u8)
                 .unwrap();
-            let outer_tree = PathBuf::from(std::str::from_utf8(&data[counter..counter + index])?);
+            let filename = PathBuf::from(std::str::from_utf8(&data[counter..counter + index])?);
             counter += index + 1;
             // let hex_sha1: [u8; 20] = data[counter..counter+20].try_into().unwrap();
             let sha1: [u8; 40] = hex::encode(&data[counter..counter + 20])
@@ -67,19 +70,14 @@ impl Tree {
 
             ref_entries.push(RefEntry {
                 mode,
-                outer_tree,
+                filename,
                 sha1,
             });
             counter += 20;
-
-            let break_var = data[counter..].iter().position(|x| *x == ' ' as u8);
-            if break_var.is_none() {
-                break;
-            }
         }
 
         for entries in &ref_entries {
-            println!("{}", entries.outer_tree.display());
+            println!("{}", entries.filename.display());
         }
 
         Ok(())
@@ -90,8 +88,8 @@ impl Tree {
 
         let mut tree: Vec<RefEntry> = Vec::new();
 
-        for i in absolute_entries {
-            let f = File::open(&i)?;
+        for filename in absolute_entries {
+            let f = File::open(&filename)?;
             let metadata = f.metadata()?;
             let permissions = metadata.permissions();
             let mut git_mode: u32 = format!("{:o}", permissions.mode()).parse().unwrap();
@@ -104,12 +102,12 @@ impl Tree {
                         git_mode = 100755;
                     }
 
-                    let byte_vec = fs::read(&i)?;
+                    let byte_vec = fs::read(&filename)?;
                     let hex_sha1 = Object::hash_object(ObjectType::Blob, byte_vec)?;
 
                     let entry = RefEntry {
                         mode: git_mode,
-                        outer_tree: i,
+                        filename,
                         sha1: hex_sha1
                             .as_bytes()
                             .try_into()
@@ -121,13 +119,12 @@ impl Tree {
             } else if metadata.is_dir() {
                 git_mode = 40000;
 
-                let ref_entries = Tree::tree_content(&i)?;
-                let byte_vec = Tree::ref_entries_to_bytes(ref_entries)?;
+                let byte_vec = Tree::ref_entries_to_bytes(&filename)?;
                 let sha1 = Object::hash_object(ObjectType::Tree, byte_vec)?;
 
                 let entry = RefEntry {
                     mode: git_mode,
-                    outer_tree: i,
+                    filename,
                     sha1: sha1.as_bytes().try_into().expect("Incorrect sha1 length"),
                 };
 
@@ -135,22 +132,22 @@ impl Tree {
             }
         }
 
-        tree.sort_by_key(|x| x.outer_tree.clone());
+        tree.sort_by_key(|x| x.filename.clone());
 
         //a cool edge case I came across. took me a lot of time to figure this one out. very
         //surprised this is how git has implemented file order
         if tree.len() > 0 {
             for i in 0..tree.len() - 1 {
-                let pathbuf = &tree[i].outer_tree;
+                let pathbuf = &tree[i].filename;
                 if let None = pathbuf.extension() {
                     if pathbuf.is_dir() {
-                        if let Some(extension) = &tree[i + 1].outer_tree.extension() {
+                        if let Some(extension) = &tree[i + 1].filename.extension() {
                             let mut new_pathname = String::new();
-                            let string = &tree[i].outer_tree.display().to_string();
+                            let string = &tree[i].filename.display().to_string();
                             new_pathname.push_str(&string);
                             new_pathname.push_str(".");
                             new_pathname.push_str(extension.to_str().unwrap());
-                            if tree[i + 1].outer_tree.display().to_string() == new_pathname {
+                            if tree[i + 1].filename.display().to_string() == new_pathname {
                                 tree.swap(i, i + 1);
                             }
                         }
@@ -162,13 +159,14 @@ impl Tree {
         Ok(tree)
     }
 
-    pub fn ref_entries_to_bytes(vec: Vec<RefEntry>) -> Result<Vec<u8>> {
+    pub fn ref_entries_to_bytes<T: AsRef<Path>>(path: T) -> Result<Vec<u8>> {
+        let vec = Tree::tree_content(path)?;
         let mut bytes: Vec<u8> = Vec::new();
         for object in vec {
             bytes.extend(object.mode.to_string().as_bytes());
             bytes.push(' ' as u8);
 
-            let mut path = object.outer_tree;
+            let mut path = object.filename;
             if let Some(index) = path.to_str().unwrap().rfind("/") {
                 let pathbuf_string = path.display().to_string();
                 let prefix = &pathbuf_string[..index + 1];
@@ -190,8 +188,7 @@ impl Tree {
     }
 
     pub fn write_tree() -> Result<()> {
-        let ref_entries = Tree::tree_content(".")?;
-        let byte_vec = Tree::ref_entries_to_bytes(ref_entries)?;
+        let byte_vec = Tree::ref_entries_to_bytes(".")?;
         let sha1 = Object::hash_object(ObjectType::Tree, byte_vec)?;
 
         println!("{}", sha1);
