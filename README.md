@@ -1,3 +1,9 @@
+# Todo
+- [ ] Try and make the current implementation more idomatic
+- [ ] Implement `git clone` in the project, currently stuck because I'm running into problems while trying to parse
+the git packfiles despite reading a ton of blogs :/
+
+***
 This is a starting point for Rust solutions to the
 ["Build Your Own Git" Challenge](https://codecrafters.io/challenges/git).
 
